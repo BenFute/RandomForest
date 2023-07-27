@@ -1,4 +1,6 @@
 //A simplified decision tree that can handle binary classificiation tasks.
+//Random Forest is an ensemble learning technique used in machine learning for both classification and regression tasks.
+//It is a popular and powerful algorithm that combines the predictions of multiple individual decision tress to make more accurate and robust predictions
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -144,12 +146,76 @@ Node* create_decision_tree(DataPoint* data, int num_data, int depth) {
     root->left = create_decision_tree(best_left_data, best_left_count, depth);
     root->right = create_decision_tree(best_right_data, best_left_count, depth);
     return root;
+}
 
+// Function to preduct using the decision tree
+int predict(Node* root, double* features) {
+    if (root->left == NULL && root->right == NULL) {
+        return root->left_label;
+    }
+    
+    if (features[root->feature_index] <= root->threshold) {
+        return predict(root->left, features);
+    } else {
+        return predict(root->right, features);
+    }
+}
+
+// Function to free the memory allocated for the decision tree
+void free_tree(Node* root) {
+    if (root == NULL) return;
+    free_tree(root->left);
+    free_tree(root->right);
+    free(root);
 }
 
 
-int main(int argc, const char * argv[]) {
-    // insert code here...
-    printf("Hello, World!\n");
+int main() {
+    // Sample dataset with two features (x1, x2) and binary labels (0 or 1)
+    DataPoint dataset[] = {
+        {{1.2, 2.3}, 1},
+        {{0.3, 1.5}, 0},
+        // Add more data points here...
+    };
+    
+    int num_data = sizeof(dataset) / sizeof(dataset[0]);
+    
+    // Create a Random Forest by creating multiple decision trees
+    Node* forest[NUM_TREES];
+    
+    for (int i = 0; i < NUM_TREES; i++) {
+        DataPoint* data_sampled = (DataPoint*)malloc(num_data * sizeof(DataPoint));
+        for (int j = 0; j < num_data; j++) {
+            int random_index = rand() % num_data;
+            data_sampled[j] = dataset[random_index];
+        }
+        
+        forest[i] = create_decision_tree(data_sampled, num_data, 0);
+        free(data_sampled);
+    }
+    
+    // Test the Random Forest by predicting on new data points
+    double new_data_point[] = {2.5, 3.1};
+    
+    int num_trees_voted_class_0 = 0;
+    for (int i = 0; i < NUM_TREES; i++) {
+        int prediction = predict(forest[i], new_data_point);
+        if (prediction == 0) {
+            num_trees_voted_class_0++;
+        }
+    }
+    
+    // Assume majority voting for binary classification
+    int final_prediction = (num_trees_voted_class_0 >= NUM_TREES / 2) ? 0 : 1;
+    
+    //The class that receives the most votes among the trees becomes the final predicted class
+    printf("Final prediction: %d\n", final_prediction);
+    
+    // Clean up memory
+    for (int i = 0; i < NUM_TREES; i++) {
+        free_tree(forest[i]);
+    }
+    
     return 0;
+    
 }
